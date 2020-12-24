@@ -20,6 +20,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "cmsis_os.h"
+#include <stdio.h>
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -52,6 +53,13 @@ const osThreadAttr_t defaultTask_attributes = {
 osThreadId_t cypress2TaskHandle;
 const osThreadAttr_t cypress2Task_attributes = {
   .name = "cypress2Task",
+  .priority = (osPriority_t) osPriorityAboveNormal,
+  .stack_size = 128
+};
+
+osThreadId_t ateCmdsTaskHandle;
+const osThreadAttr_t ateCmdsTask_attributes = {
+  .name = "ateCmdsTask",
   .priority = (osPriority_t) osPriorityNormal1,
   .stack_size = 128
 };
@@ -69,6 +77,8 @@ void StartDefaultTask(void *argument);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 void Cypress2Task(void *argument);
+void ATECmdsTask(void *argument);
+
 /* USER CODE END 0 */
 
 /**
@@ -129,6 +139,7 @@ int main(void)
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   cypress2TaskHandle = osThreadNew(Cypress2Task, NULL, &cypress2Task_attributes);
+  ateCmdsTaskHandle = osThreadNew(ATECmdsTask, NULL, &ateCmdsTask_attributes);
   /* USER CODE END RTOS_THREADS */
 
   /* Start scheduler */
@@ -241,6 +252,18 @@ void Cypress2Task(void *argument)
   {
     osDelay(1000);
     HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_7);
+  }
+  /* USER CODE END 5 */
+}
+
+void ATECmdsTask(void *argument)
+{
+  /* USER CODE BEGIN 5 */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1000);
+//    printf("ATECmdsTask\n");
   }
   /* USER CODE END 5 */
 }
