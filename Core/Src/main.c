@@ -45,7 +45,7 @@ FDCAN_HandleTypeDef hfdcan1;
 
 TIM_HandleTypeDef htim3;
 
-//FDCAN_TxHeaderTypeDef txHeader;
+FDCAN_TxHeaderTypeDef txHeader;
 uint8_t txData[8] = { 0 };
 
 /* Definitions for defaultTask */
@@ -60,7 +60,7 @@ osThreadId_t cypress2TaskHandle;
 const osThreadAttr_t cypress2Task_attributes = {
   .name = "cypress2Task",
   .priority = (osPriority_t) osPriorityNormal1,
-  .stack_size = 128
+  .stack_size = 256
 };
 
 osThreadId_t ateCmdsTaskHandle;
@@ -373,11 +373,23 @@ void Cypress2Task(void *argument)
 {
   /* USER CODE BEGIN 5 */
   /* Infinite loop */
-  for(;;)
-  {
-    osDelay(1000);
-    HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_7);
-  }
+	txHeader.Identifier = 0x123;
+	txHeader.IdType = FDCAN_STANDARD_ID;
+	txHeader.TxFrameType = FDCAN_DATA_FRAME;
+	txHeader.DataLength = FDCAN_DLC_BYTES_8;
+	txHeader.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
+	txHeader.BitRateSwitch = FDCAN_BRS_OFF;
+	txHeader.FDFormat = FDCAN_CLASSIC_CAN;
+	txHeader.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
+	txHeader.MessageMarker = 0;
+	uint32_t id = 0;
+
+	for (;;) {
+		txData[0] = id++;
+		HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &txHeader, txData);
+		osDelay(1000);
+	}
+
   /* USER CODE END 5 */
 }
 
@@ -393,7 +405,7 @@ void ATECmdsTask(void *argument)
 			if (HAL_FDCAN_GetRxFifoFillLevel(&hfdcan1, FDCAN_RX_FIFO0) > 2
 					&& HAL_FDCAN_GetRxMessage(&hfdcan1, FDCAN_RX_FIFO0,
 							&rxHeader, rxData) == HAL_OK) {
-				//			HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_7);
+							HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_7);
 			}
 			osDelay(1000);
 		}
