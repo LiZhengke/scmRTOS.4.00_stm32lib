@@ -18,6 +18,7 @@
   */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
+#include <stdio.h>
 #include "main.h"
 #include "cmsis_os.h"
 
@@ -37,7 +38,14 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-
+int _write(int32_t file, uint8_t *ptr, int32_t len)
+{
+	for (int i = 0; i < len; i++)
+	{
+		ITM_SendChar(*ptr++);
+	}
+	return len;
+}
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -49,12 +57,7 @@ FDCAN_TxHeaderTypeDef txHeader;
 uint8_t txData[8] = { 0 };
 
 /* Definitions for defaultTask */
-//osThreadId_t defaultTaskHandle;
-//const osThreadAttr_t defaultTask_attributes = {
-//  .name = "defaultTask",
-//  .priority = (osPriority_t) osPriorityNormal,
-//  .stack_size = 128
-//};
+
 /* USER CODE BEGIN PV */
 osThreadId_t cypress2TaskHandle;
 const osThreadAttr_t cypress2Task_attributes = {
@@ -120,7 +123,7 @@ int main(void)
   MX_FDCAN1_Init();
   MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
-
+  printf("Init completed.\n");
   /* USER CODE END 2 */
 
   /* Init scheduler */
@@ -144,7 +147,6 @@ int main(void)
 
   /* Create the thread(s) */
   /* creation of defaultTask */
-//  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */

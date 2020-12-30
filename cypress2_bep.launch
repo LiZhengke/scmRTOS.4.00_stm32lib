@@ -12,10 +12,10 @@
 <booleanAttribute key="com.st.stm32cube.ide.mcu.debug.jlink.scan_chain_auto" value="true"/>
 <intAttribute key="com.st.stm32cube.ide.mcu.debug.jlink.scan_chain_irpre" value="0"/>
 <intAttribute key="com.st.stm32cube.ide.mcu.debug.jlink.scan_chain_pos" value="0"/>
-<stringAttribute key="com.st.stm32cube.ide.mcu.debug.jlink.selected_rtos" value="No RTOS"/>
+<stringAttribute key="com.st.stm32cube.ide.mcu.debug.jlink.selected_rtos" value="RTOSPlugin_FreeRTOS"/>
 <stringAttribute key="com.st.stm32cube.ide.mcu.debug.launch.access_port_id" value="0"/>
 <booleanAttribute key="com.st.stm32cube.ide.mcu.debug.launch.enable_live_expr" value="true"/>
-<booleanAttribute key="com.st.stm32cube.ide.mcu.debug.launch.enable_swv" value="false"/>
+<booleanAttribute key="com.st.stm32cube.ide.mcu.debug.launch.enable_swv" value="true"/>
 <intAttribute key="com.st.stm32cube.ide.mcu.debug.launch.formatVersion" value="2"/>
 <stringAttribute key="com.st.stm32cube.ide.mcu.debug.launch.ip_address_local" value="localhost"/>
 <stringAttribute key="com.st.stm32cube.ide.mcu.debug.launch.loadList" value="{&quot;fItems&quot;:[{&quot;fIsFromMainTab&quot;:true,&quot;fPath&quot;:&quot;Debug/cypress2_bep.elf&quot;,&quot;fProjectName&quot;:&quot;cypress2_bep&quot;,&quot;fPerformBuild&quot;:true,&quot;fDownload&quot;:true,&quot;fLoadSymbols&quot;:true}]}"/>
@@ -28,7 +28,7 @@
 <booleanAttribute key="com.st.stm32cube.ide.mcu.debug.launch.swd_mode" value="true"/>
 <stringAttribute key="com.st.stm32cube.ide.mcu.debug.launch.swv_port" value="2332"/>
 <stringAttribute key="com.st.stm32cube.ide.mcu.debug.launch.swv_trace_div" value="0"/>
-<stringAttribute key="com.st.stm32cube.ide.mcu.debug.launch.swv_trace_hclk" value="8000000"/>
+<stringAttribute key="com.st.stm32cube.ide.mcu.debug.launch.swv_trace_hclk" value="24000000"/>
 <booleanAttribute key="com.st.stm32cube.ide.mcu.debug.launch.useRemoteTarget" value="true"/>
 <stringAttribute key="com.st.stm32cube.ide.mcu.debug.launch.vector_table" value=""/>
 <booleanAttribute key="com.st.stm32cube.ide.mcu.debug.launch.verify_flash_download" value="true"/>
