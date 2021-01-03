@@ -23,6 +23,7 @@
 #include "stm32l5xx_it.h"
 #include "FreeRTOS.h"
 #include "task.h"
+#include "cmsis_os2.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 /* USER CODE END Includes */
@@ -60,6 +61,9 @@
 /* External variables --------------------------------------------------------*/
 extern FDCAN_HandleTypeDef hfdcan1;
 extern TIM_HandleTypeDef htim3;
+#ifdef HW_TIMER
+extern osSemaphoreId_t CanTXSemHandle;
+#endif
 /* USER CODE BEGIN EV */
 
 /* USER CODE END EV */
@@ -191,6 +195,7 @@ void FDCAN1_IT1_IRQHandler(void)
 /**
   * @brief This function handles TIM3 global interrupt.
   */
+#ifdef HW_TIMER
 void TIM3_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM3_IRQn 0 */
@@ -198,10 +203,10 @@ void TIM3_IRQHandler(void)
   /* USER CODE END TIM3_IRQn 0 */
   HAL_TIM_IRQHandler(&htim3);
   /* USER CODE BEGIN TIM3_IRQn 1 */
-
+  osSemaphoreRelease(CanTXSemHandle);
   /* USER CODE END TIM3_IRQn 1 */
 }
-
+#endif
 /* USER CODE BEGIN 1 */
 
 /* USER CODE END 1 */

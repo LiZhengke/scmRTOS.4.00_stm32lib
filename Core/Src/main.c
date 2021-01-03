@@ -21,7 +21,7 @@
 #include <stdio.h>
 #include "main.h"
 #include "cmsis_os.h"
-#define CAN_TIMER
+//#define CAN_TIMER
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -63,6 +63,13 @@ osTimerId_t CanTimerHandle;
 const osTimerAttr_t CanTimer_attributes = {
   .name = "CanTimer"
 };
+
+/* Definitions for CanTXSem */
+osSemaphoreId_t CanTXSemHandle;
+const osSemaphoreAttr_t CanTXSem_attributes = {
+  .name = "CanTXSem"
+};
+
 /* Definitions for CanRXSem */
 osSemaphoreId_t CanRXSemHandle;
 const osSemaphoreAttr_t CanRXSem_attributes = {
@@ -88,7 +95,9 @@ const osThreadAttr_t ateCmdsTask_attributes = {
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_FDCAN1_Init(void);
+#ifdef HW_TIMER
 static void MX_TIM3_Init(void);
+#endif
 void StartDefaultTask(void *argument);
 void CanTimerFunc(void *argument);
 
@@ -132,7 +141,9 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_FDCAN1_Init();
+#ifdef HW_TIMER
   MX_TIM3_Init();
+#endif
   /* USER CODE BEGIN 2 */
   printf("Init completed.\n");
   /* USER CODE END 2 */
@@ -147,6 +158,8 @@ int main(void)
   /* Create the semaphores(s) */
   /* creation of CanRXSem */
   CanRXSemHandle = osSemaphoreNew(1, 0, &CanRXSem_attributes);
+  /* creation of CanRXSem */
+  CanTXSemHandle = osSemaphoreNew(1, 0, &CanTXSem_attributes);
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
@@ -154,8 +167,9 @@ int main(void)
 
   /* Create the timer(s) */
   /* creation of CanTimer */
+#ifdef SW_TIMER
   CanTimerHandle = osTimerNew(CanTimerFunc, osTimerPeriodic, NULL, &CanTimer_attributes);
-
+#endif
   /* USER CODE BEGIN RTOS_TIMERS */
   /* start timers, add new ones, ... */
   /* USER CODE END RTOS_TIMERS */
@@ -271,6 +285,12 @@ static void MX_FDCAN1_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN FDCAN1_Init 2 */
+	HAL_FDCAN_ConfigInterruptLines(&hfdcan1, 0xFFFFFFFF, FDCAN_INTERRUPT_LINE1);
+
+	if (HAL_FDCAN_ActivateNotification(&hfdcan1, 0x3FFFFFFF, 0) != HAL_OK) {
+		/* Notification Error */
+		Error_Handler();
+	}
   if (HAL_FDCAN_Start(&hfdcan1) != HAL_OK) {
   		Error_Handler();
   }
@@ -283,6 +303,7 @@ static void MX_FDCAN1_Init(void)
   * @param None
   * @retval None
   */
+#ifdef HW_TIMER
 static void MX_TIM3_Init(void)
 {
 
@@ -298,7 +319,7 @@ static void MX_TIM3_Init(void)
 
   /* USER CODE END TIM3_Init 1 */
   htim3.Instance = TIM3;
-  htim3.Init.Prescaler = 1;
+  htim3.Init.Prescaler = 24 * 100;
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim3.Init.Period = 10000;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -331,7 +352,7 @@ static void MX_TIM3_Init(void)
   /* USER CODE END TIM3_Init 2 */
 
 }
-
+#endif
 /**
   * @brief GPIO Initialization Function
   * @param None
@@ -405,16 +426,18 @@ void Cypress2Task(void *argument)
 	txHeader.FDFormat = FDCAN_CLASSIC_CAN;
 	txHeader.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
 	txHeader.MessageMarker = 0;
-
-#ifdef CAN_TIMER
+#ifdef SW_TIMER
 	osTimerStart(CanTimerHandle,pdMS_TO_TICKS(1000));
-#else
+#endif
+#if defined SW_TIMER || defined HW_TIMER
 	uint32_t id = 0;
 #endif
 	for (;;) {
-#ifndef CAN_TIMER
-		txData[0] = id++;
-		HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &txHeader, txData);
+#if defined SW_TIMER || defined HW_TIMER
+		if (osSemaphoreAcquire(CanTXSemHandle, pdMS_TO_TICKS(2500)) == osOK) {
+			txData[0] = id++;
+			HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &txHeader, txData);
+		}
 #endif
 		osDelay(10);
 	}
@@ -438,8 +461,8 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
     {
 //      HAL_FDCAN_GetRxMessage(&hfdcan1,FDCAN_RX_FIFO0,&FDCAN1_RxHeader,canbuf_Rec);
 //      CANFD1_Rce_Flag=1;
-      HAL_FDCAN_ActivateNotification(&hfdcan1,FDCAN_IT_RX_FIFO0_NEW_MESSAGE,0);
-    	osSemaphoreRelease(CanRXSemHandle);
+      HAL_FDCAN_ActivateNotification(&hfdcan1,FDCAN_IT_GROUP_RX_FIFO0|FDCAN_IT_GROUP_SMSG,0);
+      osSemaphoreRelease(CanRXSemHandle);
     }
   }
 }
@@ -453,39 +476,39 @@ void ATECmdsTask(void *argument)
   {
 		FDCAN_RxHeaderTypeDef rxHeader;
 		uint8_t rxData[8];
-		for (;;) {
 #ifdef CAN_POLLING
 			if (HAL_FDCAN_GetRxFifoFillLevel(&hfdcan1, FDCAN_RX_FIFO0) > 2
 					&& HAL_FDCAN_GetRxMessage(&hfdcan1, FDCAN_RX_FIFO0,
 							&rxHeader, rxData) == HAL_OK) {
 							HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_7);
 			}
-			osDelay(1000);
 #else
 			if (osSemaphoreAcquire(CanRXSemHandle, pdMS_TO_TICKS(2500))
 					== osOK) {
+#if defined SW_TIMER || defined HW_TIMER
 				if (HAL_FDCAN_GetRxFifoFillLevel(&hfdcan1, FDCAN_RX_FIFO0) > 2
 						&& HAL_FDCAN_GetRxMessage(&hfdcan1, FDCAN_RX_FIFO0,
-								&rxHeader, rxData) == HAL_OK) {
+								&rxHeader, rxData) == HAL_OK)
+#endif
+				{
 					HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_7);
 				}
 			}
 #endif
+			osDelay(10);
 		}
-
-	}
   /* USER CODE END 5 */
 }
 
+#ifdef SW_TIMER
 /* CanTimerFunc function */
 void CanTimerFunc(void *argument)
 {
   /* USER CODE BEGIN CanTimerFunc */
-	txData[0]++;
-	HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &txHeader, txData);
+	osSemaphoreRelease(CanTXSemHandle);
   /* USER CODE END CanTimerFunc */
 }
-
+#endif
 /**
   * @brief  This function is executed in case of error occurrence.
   * @retval None
