@@ -80,14 +80,14 @@ osThreadId_t cypress2TaskHandle;
 const osThreadAttr_t cypress2Task_attributes = {
   .name = "cypress2Task",
   .priority = (osPriority_t) osPriorityNormal1,
-  .stack_size = 256
+  .stack_size = 128 * 5
 };
 
 osThreadId_t ateCmdsTaskHandle;
 const osThreadAttr_t ateCmdsTask_attributes = {
   .name = "ateCmdsTask",
   .priority = (osPriority_t) osPriorityNormal,
-  .stack_size = 256
+  .stack_size = 128 * 5
 };
 /* USER CODE END PV */
 
@@ -145,7 +145,7 @@ int main(void)
   MX_TIM3_Init();
 #endif
   /* USER CODE BEGIN 2 */
-  printf("Init completed.\n");
+//  printf("Init completed.\n");
   /* USER CODE END 2 */
 
   /* Init scheduler */
@@ -264,19 +264,19 @@ static void MX_FDCAN1_Init(void)
 
   /* USER CODE END FDCAN1_Init 1 */
   hfdcan1.Instance = FDCAN1;
-  hfdcan1.Init.FrameFormat = FDCAN_FRAME_FD_BRS;
-  hfdcan1.Init.Mode = FDCAN_MODE_EXTERNAL_LOOPBACK;
+  hfdcan1.Init.FrameFormat = FDCAN_FRAME_CLASSIC;
+  hfdcan1.Init.Mode = FDCAN_MODE_BUS_MONITORING;
   hfdcan1.Init.AutoRetransmission = DISABLE;
   hfdcan1.Init.TransmitPause = DISABLE;
   hfdcan1.Init.ProtocolException = DISABLE;
-  hfdcan1.Init.NominalPrescaler = 2;
-  hfdcan1.Init.NominalSyncJumpWidth = 8;
-  hfdcan1.Init.NominalTimeSeg1 = 20;
-  hfdcan1.Init.NominalTimeSeg2 = 20;
-  hfdcan1.Init.DataPrescaler = 1;
-  hfdcan1.Init.DataSyncJumpWidth = 8;
-  hfdcan1.Init.DataTimeSeg1 = 20;
-  hfdcan1.Init.DataTimeSeg2 = 1;
+  hfdcan1.Init.NominalPrescaler = 24;
+  hfdcan1.Init.NominalSyncJumpWidth = 1;
+  hfdcan1.Init.NominalTimeSeg1 = 4;
+  hfdcan1.Init.NominalTimeSeg2 = 3;
+  hfdcan1.Init.DataPrescaler = 24;
+  hfdcan1.Init.DataSyncJumpWidth = 1;
+  hfdcan1.Init.DataTimeSeg1 = 4;
+  hfdcan1.Init.DataTimeSeg2 = 3;
   hfdcan1.Init.StdFiltersNbr = 0;
   hfdcan1.Init.ExtFiltersNbr = 0;
   hfdcan1.Init.TxFifoQueueMode = FDCAN_TX_FIFO_OPERATION;
@@ -287,7 +287,9 @@ static void MX_FDCAN1_Init(void)
   /* USER CODE BEGIN FDCAN1_Init 2 */
 	HAL_FDCAN_ConfigInterruptLines(&hfdcan1, 0xFFFFFFFF, FDCAN_INTERRUPT_LINE1);
 
-	if (HAL_FDCAN_ActivateNotification(&hfdcan1, 0x3FFFFFFF, 0) != HAL_OK) {
+    if (HAL_FDCAN_ActivateNotification(&hfdcan1, 0x3FFFFFFF, 0) != HAL_OK) {
+	//if (HAL_FDCAN_ActivateNotification(&hfdcan1, FDCAN_IT_GROUP_RX_FIFO0 |
+  	//	  FDCAN_IT_GROUP_TX_FIFO_ERROR | FDCAN_IT_GROUP_SMSG, 0) != HAL_OK) {
 		/* Notification Error */
 		Error_Handler();
 	}
@@ -373,7 +375,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6|GPIO_PIN_7, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0, GPIO_PIN_SET);
 
   /*Configure GPIO pins : PB6 PB7 */
   GPIO_InitStruct.Pin = GPIO_PIN_6|GPIO_PIN_7;
@@ -453,6 +455,13 @@ void HAL_FDCAN_TxEventFifoCallback(FDCAN_HandleTypeDef *hfdcan, uint32_t TxEvent
 		printf("HAL_FDCAN_TxEventFifoCallback\n");
 	}
 }
+void HAL_FDCAN_TxFifoEmptyCallback(FDCAN_HandleTypeDef *hfdcan)
+{
+	if (hfdcan == &hfdcan1) //CANFD1中断
+				{
+			printf("HAL_FDCAN_TxFifoEmptyCallback\n");
+		}
+}
 void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
 {
   if((RxFifo0ITs & FDCAN_IT_RX_FIFO0_NEW_MESSAGE)!=RESET)   //FIFO1新数据中断
@@ -461,7 +470,8 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
     {
 //      HAL_FDCAN_GetRxMessage(&hfdcan1,FDCAN_RX_FIFO0,&FDCAN1_RxHeader,canbuf_Rec);
 //      CANFD1_Rce_Flag=1;
-      HAL_FDCAN_ActivateNotification(&hfdcan1,FDCAN_IT_GROUP_RX_FIFO0|FDCAN_IT_GROUP_SMSG,0);
+      HAL_FDCAN_ActivateNotification(&hfdcan1,FDCAN_IT_GROUP_RX_FIFO0 |
+    		  FDCAN_IT_LIST_TX_FIFO_ERROR | FDCAN_IT_GROUP_SMSG,0);
       osSemaphoreRelease(CanRXSemHandle);
     }
   }
